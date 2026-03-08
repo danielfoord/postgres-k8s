@@ -1,0 +1,47 @@
+---
+# Read-Write pooler — connects to the primary
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: postgres-pooler-rw
+  namespace: data
+spec:
+  cluster:
+    name: postgres-cluster
+  # "rw" targets the primary instance only
+  type: rw
+  instances: 2
+
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      max_client_conn: "200"
+      default_pool_size: "25"
+      reserve_pool_size: "5"
+      reserve_pool_timeout: "5"
+      server_idle_timeout: "600"
+      client_idle_timeout: "600"
+
+---
+# Read-Only pooler — connects to the replica(s)
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: postgres-pooler-ro
+  namespace: data
+spec:
+  cluster:
+    name: postgres-cluster
+  # "ro" targets read-only replica instances only
+  type: ro
+  instances: 2
+
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      max_client_conn: "200"
+      default_pool_size: "25"
+      reserve_pool_size: "5"
+      reserve_pool_timeout: "5"
+      server_idle_timeout: "600"
+      client_idle_timeout: "600"

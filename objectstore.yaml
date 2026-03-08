@@ -1,0 +1,21 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: seaweedfs-store
+  namespace: data
+spec:
+  configuration:
+    destinationPath: s3://postgres-backups/
+    endpointURL: http://seaweedfs-s3.data.svc:8333
+    s3Credentials:
+      accessKeyId:
+        name: seaweedfs-s3-credentials
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: seaweedfs-s3-credentials
+        key: ACCESS_SECRET_KEY
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  retentionPolicy: "7d"

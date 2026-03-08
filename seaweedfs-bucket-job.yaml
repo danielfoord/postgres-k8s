@@ -1,0 +1,48 @@
+---
+# One-time Job that creates the postgres-backups bucket in SeaweedFS.
+# Run this after SeaweedFS is ready but before applying cluster.yaml.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-backup-bucket
+  namespace: data
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        # Wait for SeaweedFS S3 to be ready before creating the bucket
+        - name: wait-for-seaweedfs
+          image: curlimages/curl:8.18.0
+          command:
+            - sh
+            - -c
+            - |
+              until curl -s --connect-timeout 3 -o /dev/null http://seaweedfs-s3.data.svc:8333/; do
+                echo "Waiting for SeaweedFS S3 gateway..."
+                sleep 3
+              done
+      containers:
+        - name: create-bucket
+          image: amazon/aws-cli:2.34.4
+          command:
+            - sh
+            - -c
+            - |
+              aws s3 ls s3://postgres-backups --endpoint-url http://seaweedfs-s3.data.svc:8333 2>/dev/null \
+                && echo "Bucket already exists, skipping." \
+                || aws s3 mb s3://postgres-backups --endpoint-url http://seaweedfs-s3.data.svc:8333
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: seaweedfs-s3-credentials
+                  key: ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: seaweedfs-s3-credentials
+                  key: ACCESS_SECRET_KEY
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1

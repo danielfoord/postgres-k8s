@@ -1,0 +1,86 @@
+# RESTORE TEMPLATE
+#
+# This creates a new 3-node cluster bootstrapped from the latest backup
+# stored in SeaweedFS. It does NOT modify the existing cluster.
+#
+# Usage:
+#   1. Optionally set `recoveryTarget.targetTime` below for point-in-time recovery.
+#      Leave the recoveryTarget block commented out to restore from the latest backup.
+#   2. Apply: kubectl apply -f restore.yaml
+#   3. Watch:  kubectl get cluster -n data -w
+#   4. Once healthy, update your app to point to postgres-cluster-restored.
+#   5. If replacing the old cluster, delete the original and rename via kubectl.
+#
+---
+# ObjectStore for the restored cluster — writes to a separate bucket path
+# so it does not collide with or overwrite the original cluster's backups
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: seaweedfs-store-restored
+  namespace: data
+spec:
+  configuration:
+    destinationPath: s3://postgres-backups-restored/
+    endpointURL: http://seaweedfs-s3.data.svc:8333
+    s3Credentials:
+      accessKeyId:
+        name: seaweedfs-s3-credentials
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: seaweedfs-s3-credentials
+        key: ACCESS_SECRET_KEY
+    wal:
+      compression: gzip
+    data:
+      compression: gzip
+  retentionPolicy: "7d"
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-cluster-restored
+  namespace: data
+spec:
+  instances: 3
+
+  imageName: ghcr.io/cloudnative-pg/postgresql:18
+
+  superuserSecret:
+    name: postgres-superuser
+
+  bootstrap:
+    recovery:
+      source: postgres-cluster
+      # Uncomment and set a timestamp for point-in-time recovery (UTC):
+      # recoveryTarget:
+      #   targetTime: "2024-01-15 02:00:00"
+
+  # Recover WAL and base backups from the original cluster's store
+  externalClusters:
+    - name: postgres-cluster
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: seaweedfs-store
+          serverName: postgres-cluster
+
+  # Restored cluster archives WAL to its own separate store
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: seaweedfs-store-restored
+
+  storage:
+    storageClass: standard
+    size: 2Gi
+
+  postgresql:
+    parameters:
+      max_connections: "200"
+      log_min_duration_statement: "1000"
+
+  minSyncReplicas: 0
+  maxSyncReplicas: 0

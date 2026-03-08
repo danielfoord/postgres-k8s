@@ -1,0 +1,131 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pgadmin-credentials
+  namespace: data
+stringData:
+  email: admin@example.com
+  password: pgadmin123
+
+---
+# Pre-configures the PostgreSQL server connection so you don't have to add it manually
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pgadmin-servers
+  namespace: data
+data:
+  servers.json: |
+    {
+      "Servers": {
+        "1": {
+          "Name": "postgres-cluster (RW)",
+          "Group": "Servers",
+          "Host": "postgres-cluster-rw.data.svc",
+          "Port": 5432,
+          "MaintenanceDB": "appdb",
+          "Username": "app",
+          "SSLMode": "prefer"
+        },
+        "2": {
+          "Name": "postgres-cluster (RO)",
+          "Group": "Servers",
+          "Host": "postgres-cluster-ro.data.svc",
+          "Port": 5432,
+          "MaintenanceDB": "appdb",
+          "Username": "app",
+          "SSLMode": "prefer"
+        }
+      }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      containers:
+        - name: pgadmin
+          image: dpage/pgadmin4:9.13.0
+          ports:
+            - containerPort: 80
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: pgadmin-credentials
+                  key: email
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgadmin-credentials
+                  key: password
+            - name: PGADMIN_SERVER_JSON_FILE
+              value: /pgadmin4/servers.json
+          volumeMounts:
+            - name: servers
+              mountPath: /pgadmin4/servers.json
+              subPath: servers.json
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /misc/ping
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /misc/ping
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 3
+      volumes:
+        - name: servers
+          configMap:
+            name: pgadmin-servers
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin
+  namespace: data
+spec:
+  selector:
+    app: pgadmin
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pgadmin
+  namespace: data
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: pgadmin.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pgadmin
+                port:
+                  number: 80

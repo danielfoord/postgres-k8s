@@ -1,0 +1,45 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-cluster
+  namespace: data
+spec:
+  # 1 primary + 2 read replicas
+  instances: 3
+
+  imageName: ghcr.io/cloudnative-pg/postgresql:18
+
+  # Superuser secret (postgres user)
+  superuserSecret:
+    name: postgres-superuser
+
+  # Bootstrap: create the app database and user on first init
+  bootstrap:
+    initdb:
+      database: appdb
+      owner: app
+      secret:
+        name: postgres-app
+
+  # Per-instance storage
+  storage:
+    storageClass: standard
+    size: 2Gi
+
+  postgresql:
+    parameters:
+      # Allow enough connections for PGBouncer server-side pool
+      max_connections: "200"
+      # Logging
+      log_min_duration_statement: "1000"  # log queries over 1s
+
+  # Async replication — primary does not wait for replicas before acking writes
+  minSyncReplicas: 0
+  maxSyncReplicas: 0
+
+  # WAL archiving via the Barman Cloud Plugin (replaces deprecated barmanObjectStore)
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: seaweedfs-store

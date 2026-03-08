@@ -1,0 +1,16 @@
+# Daily scheduled backup at 2am. WAL archiving runs continuously in the background.
+# For the initial one-shot backup, see the README.
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: postgres-backup-daily
+  namespace: data
+spec:
+  # Cron: minute hour day month weekday
+  schedule: "0 0 2 * * *"
+  backupOwnerReference: self
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+  cluster:
+    name: postgres-cluster
