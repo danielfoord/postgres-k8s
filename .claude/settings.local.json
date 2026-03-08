@@ -4,7 +4,10 @@
       "Bash(curl:*)",
       "WebFetch(domain:cloudnative-pg.io)",
       "Bash(helm show:*)",
-      "Bash(helm:*)"
+      "Bash(helm:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:grafana.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

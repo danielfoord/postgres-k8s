@@ -11,3 +11,5 @@ resources:
   - pooler.yaml
   - backup.yaml
   - pgadmin.yaml
+  - monitoring/dashboards.yaml
+  - monitoring/podmonitor.yaml

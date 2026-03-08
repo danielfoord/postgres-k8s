@@ -22,11 +22,24 @@ grafana:
   adminPassword: grafanaadmin123
   resources:
     requests:
-      memory: 128Mi
+      memory: 256Mi
       cpu: 50m
     limits:
-      memory: 256Mi
+      memory: 512Mi
       cpu: 200m
+  readinessProbe:
+    initialDelaySeconds: 60
+  livenessProbe:
+    initialDelaySeconds: 120
+  env:
+    GF_FEATURE_TOGGLES_ENABLE: ""
+  grafana.ini:
+    plugins:
+      enable_alpha: false
+    plugin.grafana-exploretraces-app:
+      disabled: true
+    plugin.grafana-metricsdrilldown-app:
+      disabled: true
   ingress:
     enabled: true
     ingressClassName: nginx

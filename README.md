@@ -97,7 +97,9 @@ postgres-k8s/
 ├── restore.yaml              # restore/PITR template (applied manually only)
 ├── kustomization.yaml        # applies all resources in order
 ├── monitoring/
-│   └── values.yaml           # kube-prometheus-stack Helm values (minimal footprint)
+│   ├── values.yaml           # kube-prometheus-stack Helm values (minimal footprint)
+│   ├── dashboards.yaml       # CloudNativePG Grafana dashboard ConfigMap
+│   └── podmonitor.yaml       # PodMonitor for Prometheus to scrape PostgreSQL metrics
 └── scripts/
     └── preload-images.sh     # pulls and loads all images into kind
 ```
@@ -207,8 +209,10 @@ Edit `pgadmin.yaml` and change the default PGAdmin credentials.
 > **Steps 1–4 must complete before this.** `objectstore.yaml` depends on the `ObjectStore` CRD installed by the Barman Cloud Plugin in step 3.
 
 ```bash
-kubectl apply -k .
+kubectl apply --server-side -k .
 ```
+
+> Server-side apply is required because `monitoring/dashboards.yaml` contains a large ConfigMap (~250 KB) that exceeds the annotation size limit used by regular `kubectl apply`.
 
 > Podman runs rootless and cannot bind to ports below 1024. The kind cluster maps
 > container port 80 → host port 8080 and 443 → 8443. Access all ingress URLs
@@ -318,7 +322,7 @@ Browse to [http://pgadmin.localhost:8080](http://pgadmin.localhost:8080) and add
 
 ### Grafana
 
-Browse to [http://grafana.localhost:8080](http://grafana.localhost:8080). CloudNativePG dashboards are pre-loaded showing replication lag, WAL activity, connection pool stats, and query performance.
+Browse to [http://grafana.localhost:8080](http://grafana.localhost:8080). The **CloudNativePG** dashboard is loaded automatically via a ConfigMap (`monitoring/dashboards.yaml`) picked up by the Grafana sidecar. It shows replication lag, WAL activity, connections, storage utilization, and per-instance health.
 
 ### SeaweedFS UI
 
