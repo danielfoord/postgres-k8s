@@ -44,11 +44,11 @@ IMAGES=(
 
   # kube-prometheus-stack
   "quay.io/prometheus/prometheus:v3.10.0"
-  "ghcr.io/prometheus-operator/prometheus-operator:v0.89.0"
-  "ghcr.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
+  "quay.io/prometheus-operator/prometheus-operator:v0.89.0"
+  "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
+  "ghcr.io/jkroepke/kube-webhook-certgen:1.7.8"
   "quay.io/prometheus/node-exporter:v1.10.2"
   "registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.18.0"
-  "quay.io/brancz/kube-rbac-proxy:v0.21.0"
   "grafana/grafana:12.4.0"
   "quay.io/kiwigrid/k8s-sidecar:2.5.0"
 )

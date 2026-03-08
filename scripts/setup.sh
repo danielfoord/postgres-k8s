@@ -56,7 +56,14 @@ wait_rollout deployment barman-cloud cnpg-system
 # ── 5. nginx ingress controller ───────────────────────────────────────────────
 
 log "Installing nginx ingress controller..."
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+helm upgrade --install ingress-nginx ingress-nginx \
+  --repo https://kubernetes.github.io/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --set controller.hostPort.enabled=true \
+  --set controller.nodeSelector."ingress-ready"=true \
+  --set controller.tolerations[0].key=node-role.kubernetes.io/control-plane \
+  --set controller.tolerations[0].operator=Equal \
+  --set controller.tolerations[0].effect=NoSchedule
 wait_rollout deployment ingress-nginx-controller ingress-nginx
 
 # ── 6. kube-prometheus-stack ──────────────────────────────────────────────────

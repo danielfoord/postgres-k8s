@@ -162,7 +162,14 @@ kubectl rollout status deployment/barman-cloud -n cnpg-system
 ### 4. Install the nginx ingress controller
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+helm upgrade --install ingress-nginx ingress-nginx \
+  --repo https://kubernetes.github.io/ingress-nginx \
+  --namespace ingress-nginx --create-namespace \
+  --set controller.hostPort.enabled=true \
+  --set controller.nodeSelector."ingress-ready"=true \
+  --set controller.tolerations[0].key=node-role.kubernetes.io/control-plane \
+  --set controller.tolerations[0].operator=Equal \
+  --set controller.tolerations[0].effect=NoSchedule
 kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx
 ```
 
